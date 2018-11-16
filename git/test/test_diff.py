@@ -234,6 +234,19 @@ class TestDiff(TestBase):
         self.assertIsNotNone(diff_index[0].new_file)
         self.assertEqual(diff_index[0].diff, fixture('diff_initial'))
 
+    def test_diff_initial_commit_name_only(self):
+        initial_commit = self.rorepo.commit('33ebe7acec14b25c5f84f35a664803fcab2f7781')
+
+        # Without creating a patch...
+        diff_index = initial_commit.diff(NULL_TREE, **{'name-only': True})
+        self.assertEqual(diff_index[0].a_path, 'CHANGES')
+        self.assertEqual(diff_index[0].b_path, 'CHANGES')
+
+        # ...and with creating a patch
+        diff_index = initial_commit.diff(NULL_TREE, create_patch=True, **{'name-only': True})
+        self.assertEqual(diff_index[0].a_path, 'CHANGES')
+        self.assertEqual(diff_index[0].b_path, 'CHANGES')
+
     def test_diff_unsafe_paths(self):
         output = StringProcessAdapter(fixture('diff_patch_unsafe_paths'))
         res = Diff._index_from_patch_format(None, output)
