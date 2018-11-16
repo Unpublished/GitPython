@@ -140,9 +140,15 @@ class Diffable(object):
         kwargs['as_process'] = True
         proc = diff_cmd(*self._process_diff_args(args), **kwargs)
 
-        diff_method = (Diff._index_from_patch_format
-                       if create_patch
-                       else Diff._index_from_raw_format)
+        cmdline = getattr(proc, 'args', '')  # PY3+ only
+
+        if '--name-only' in cmdline:
+            diff_method = Diff._index_from_name_only_format
+        elif create_patch:
+            diff_method = Diff._index_from_patch_format
+        else:
+            diff_method = Diff._index_from_raw_format
+
         index = diff_method(self.repo, proc)
 
         proc.wait()
@@ -467,6 +473,34 @@ class Diff(object):
         if index:
             index[-1].diff = text[header.end():]
         # end assign last diff
+
+        return index
+
+    @classmethod
+    def _index_from_name_only_format(cls, repo, proc):
+        """Create a new DiffIndex from the given text which must be in name only format
+        :param repo: is the repository we are operating on - it is required
+        :param stream: result of 'git diff' as a stream (supporting file protocol)
+        :return: git.DiffIndex """
+
+        cls.is_first = True
+
+        index = DiffIndex()
+
+        def handle_diff_line_name_only(line):
+            path = line.decode(defenc)
+            if cls.is_first:
+                cls.is_first = False
+                return
+
+            path = path.strip()
+            a_path = path.encode(defenc)
+            b_path = path.encode(defenc)
+            index.append(Diff(repo, a_path, b_path, None, None, None, None,
+                              False, False, None, None, None,
+                              '', None, None))
+
+        handle_process_output(proc, handle_diff_line_name_only, None, finalize_process, decode_streams=False)
 
         return index
 
