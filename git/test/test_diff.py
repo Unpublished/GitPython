@@ -247,6 +247,23 @@ class TestDiff(TestBase):
         self.assertEqual(diff_index[0].a_path, 'CHANGES')
         self.assertEqual(diff_index[0].b_path, 'CHANGES')
 
+    def test_diff_between_commit_name_only(self):
+        initial_commit = self.rorepo.commit('33ebe7acec14b25c5f84f35a664803fcab2f7781')
+        new_commit = self.rorepo.commit('1f66cfbbce58b4b552b041707a12d437cc5f400a')
+
+        # Without creating a patch...
+        diff_index = initial_commit.diff(new_commit, **{'name-only': True})
+
+        files = {'lib/git_python/diff.py', 'lib/git_python/git.py', 'lib/git_python/repo.py',
+                 'test/git/test_repo.py', 'README'}
+
+        for diff in diff_index:
+            assert_true(diff.a_path in files)
+            assert_true(diff.b_path in files)
+            files.remove(diff.b_path)
+
+        assert_true(len(files) == 0)
+
     def test_diff_unsafe_paths(self):
         output = StringProcessAdapter(fixture('diff_patch_unsafe_paths'))
         res = Diff._index_from_patch_format(None, output)

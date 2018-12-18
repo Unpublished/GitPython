@@ -129,6 +129,7 @@ class Diffable(object):
         elif other is NULL_TREE:
             args.insert(0, '-r')  # recursive diff-tree
             args.insert(0, '--root')
+            Diff.is_first = True
             diff_cmd = self.repo.git.diff_tree
         elif other is not None:
             args.insert(0, '-r')  # recursive diff-tree
@@ -484,14 +485,14 @@ class Diff(object):
 
         return index
 
+    is_first = False
+
     @classmethod
     def _index_from_name_only_format(cls, repo, proc):
         """Create a new DiffIndex from the given text which must be in name only format
         :param repo: is the repository we are operating on - it is required
         :param stream: result of 'git diff' as a stream (supporting file protocol)
         :return: git.DiffIndex """
-
-        cls.is_first = True
 
         index = DiffIndex()
 
