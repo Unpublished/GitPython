@@ -104,7 +104,8 @@ class Diffable(object):
         args.append("--full-index")       # get full index paths, not only filenames
 
         args.append("-M")                 # check for renames, in both formats
-        if create_patch:
+        name_only = 'name-only' in kwargs
+        if not name_only and create_patch:
             args.append("-p")
         else:
             args.append("--raw")
@@ -123,6 +124,7 @@ class Diffable(object):
         elif other is NULL_TREE:
             args.insert(0, '-r')  # recursive diff-tree
             args.insert(0, '--root')
+            Diff.is_first = True
             diff_cmd = self.repo.git.diff_tree
         elif other is not None:
             args.insert(0, '-r')  # recursive diff-tree
@@ -476,6 +478,8 @@ class Diff(object):
 
         return index
 
+    is_first = False
+
     @classmethod
     def _index_from_name_only_format(cls, repo, proc):
         """Create a new DiffIndex from the given text which must be in name only format
@@ -483,22 +487,24 @@ class Diff(object):
         :param stream: result of 'git diff' as a stream (supporting file protocol)
         :return: git.DiffIndex """
 
-        cls.is_first = True
-
         index = DiffIndex()
 
-        def handle_diff_line_name_only(line):
-            path = line.decode(defenc)
-            if cls.is_first:
-                cls.is_first = False
-                return
+        def handle_diff_line_name_only(lines):
+            lines = lines.decode(defenc)
 
-            path = path.strip()
-            a_path = path.encode(defenc)
-            b_path = path.encode(defenc)
-            index.append(Diff(repo, a_path, b_path, None, None, None, None,
-                              False, False, None, None, None,
-                              '', None, None))
+            for line in lines.split('\x00'):
+                path = line.strip()
+                if len(path) == 0:
+                    continue
+                if cls.is_first:
+                    cls.is_first = False
+                    continue
+
+                a_path = path.encode(defenc)
+                b_path = path.encode(defenc)
+                index.append(Diff(repo, a_path, b_path, None, None, None, None,
+                                  False, False, None, None, None,
+                                  '', None, None))
 
         handle_process_output(proc, handle_diff_line_name_only, None, finalize_process, decode_streams=False)
 
