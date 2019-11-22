@@ -257,12 +257,14 @@ class TestDiff(TestBase):
         files = {'lib/git_python/diff.py', 'lib/git_python/git.py', 'lib/git_python/repo.py',
                  'test/git/test_repo.py', 'README'}
 
+        assert_equal(len(diff_index), len(files))
+
         for diff in diff_index:
             assert_true(diff.a_path in files)
             assert_true(diff.b_path in files)
             files.remove(diff.b_path)
 
-        assert_true(len(files) == 0)
+        assert_equal(0, len(files))
 
     def test_diff_unsafe_paths(self):
         output = StringProcessAdapter(fixture('diff_patch_unsafe_paths'))
